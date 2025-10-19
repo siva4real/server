@@ -201,8 +201,16 @@ async def search_documentation(q: str = Query(..., description="Search query")):
         if confidence < 0.5:
             print(f"WARNING: Low confidence ({confidence:.4f}) - knowledge base may not contain relevant information")
         
+        # Extract the answer portion if content is in Q&A format
+        content = best_match["content"]
+        if "Answer:" in content:
+            # Extract just the answer part after "Answer:"
+            answer = content.split("Answer:", 1)[1].strip()
+        else:
+            answer = content
+        
         return SearchResponse(
-            answer=best_match["content"],
+            answer=answer,
             sources=best_match["source"],
             confidence=float(confidence)
         )
