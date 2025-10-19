@@ -268,11 +268,11 @@ def parse_employee_query(query: str) -> Dict[str, Any]:
         }
     
     # Pattern 3: Expense Balance
-    # Examples: "Show my expense balance for employee 10056."
-    expense_pattern = r'expense.*?balance.*?(?:employee\s+)?(\d+)'
+    # Examples: "Show my expense balance for employee 10056.", "What is emp 46378's expense balance?"
+    expense_pattern = r'(?:(?:employee|emp)\s+(\d+).*?expense.*?balance|expense.*?balance.*?(?:employee|emp)\s+(\d+))'
     match = re.search(expense_pattern, query_lower)
     if match:
-        employee_id = int(match.group(1))
+        employee_id = int(match.group(1) or match.group(2))
         return {
             "name": "get_expense_balance",
             "arguments": json.dumps({"employee_id": employee_id})
@@ -280,7 +280,7 @@ def parse_employee_query(query: str) -> Dict[str, Any]:
     
     # Pattern 4: Performance Bonus
     # Examples: "Calculate performance bonus for employee 10056 for 2025."
-    bonus_pattern = r'(?:calculate|compute).*?(?:performance\s+)?bonus.*?employee\s+(\d+).*?(?:for\s+)?(\d{4})'
+    bonus_pattern = r'(?:calculate|compute).*?(?:performance\s+)?bonus.*?(?:employee|emp)\s+(\d+).*?(?:for\s+)?(\d{4})'
     match = re.search(bonus_pattern, query_lower)
     if match:
         employee_id = int(match.group(1))
