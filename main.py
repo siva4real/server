@@ -5,6 +5,7 @@ from typing import List, Optional
 import numpy as np
 from openai import OpenAI
 import os
+import re
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -206,13 +207,32 @@ async def search_documentation(q: str = Query(..., description="Search query")):
         if "Answer:" in content:
             # Extract just the answer part after "Answer:"
             full_answer = content.split("Answer:", 1)[1].strip()
-            # Get just the first sentence to avoid redundancy
-            # Look for the first sentence ending with a period
-            first_period = full_answer.find('. ')
-            if first_period != -1:
-                answer = full_answer[:first_period + 1].strip()
+            
+            # For specific "what/which" questions, extract the key information in quotes or parentheses
+            if any(word in q.lower() for word in ['what', 'which', 'who', 'where', 'when']):
+                # Look for content in single quotes (e.g., 'fat arrow', 'globals.d.ts')
+                quoted_match = re.search(r"'([^']+)'", full_answer)
+                # Look for content in parentheses (e.g., (!!), (=>))
+                paren_match = re.search(r"\(([^)]+)\)", full_answer)
+                
+                if quoted_match:
+                    answer = quoted_match.group(1)
+                elif paren_match:
+                    answer = paren_match.group(1)
+                else:
+                    # Get just the first sentence
+                    first_period = full_answer.find('. ')
+                    if first_period != -1:
+                        answer = full_answer[:first_period + 1].strip()
+                    else:
+                        answer = full_answer
             else:
-                answer = full_answer
+                # Get just the first sentence to avoid redundancy
+                first_period = full_answer.find('. ')
+                if first_period != -1:
+                    answer = full_answer[:first_period + 1].strip()
+                else:
+                    answer = full_answer
         else:
             answer = content
         
