@@ -87,12 +87,17 @@ KNOWLEDGE_BASE = [
         "content": "Declaration files with the .d.ts extension are used in TypeScript to provide type information about code that exists elsewhere. The globals.d.ts file is a special convention for declaring global types and variables that should be available throughout your entire project.",
         "source": "TypeScript Book - Declaration Files",
         "topic": "declaration files"
+    },
+    {
+        "content": "Question: Which keyword pauses and resumes execution in generator functions? Answer: The 'yield' keyword pauses and resumes execution in generator functions. Generator functions use the yield keyword to pause their execution and return a value to the caller. When the generator's next() method is called, execution resumes from where it was paused. This allows generators to produce a sequence of values over time rather than computing them all at once.",
+        "source": "TypeScript Book - Generators",
+        "topic": "generators"
     }
 ]
 
 # Cache for knowledge base embeddings to avoid recomputing
 _knowledge_base_embeddings = None
-_knowledge_base_version = 4  # Increment this when KNOWLEDGE_BASE changes
+_knowledge_base_version = 5  # Increment this when KNOWLEDGE_BASE changes
 _cached_version = None
 
 def get_knowledge_base_embeddings():
