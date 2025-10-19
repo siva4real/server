@@ -21,8 +21,18 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
-# Initialize OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# OpenAI client will be initialized lazily
+_client = None
+
+def get_openai_client():
+    """Get or create OpenAI client instance."""
+    global _client
+    if _client is None:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is not set")
+        _client = OpenAI(api_key=api_key)
+    return _client
 
 class SimilarityRequest(BaseModel):
     docs: List[str] = Field(..., description="Array of document texts")
@@ -36,6 +46,7 @@ def get_embedding(text: str) -> List[float]:
     Generate embedding for a given text using OpenAI's text-embedding-3-small model.
     """
     try:
+        client = get_openai_client()
         response = client.embeddings.create(
             model="text-embedding-3-small",
             input=text
