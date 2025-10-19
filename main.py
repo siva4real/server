@@ -5,6 +5,10 @@ from typing import List, Optional
 import numpy as np
 from openai import OpenAI
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = FastAPI(
     title="InfoCore Semantic Search API",
@@ -17,7 +21,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Allow all origins
     allow_credentials=True,
-    allow_methods=["OPTIONS", "POST"],  # Allow OPTIONS and POST
+    allow_methods=["OPTIONS", "GET", "POST"],  # Allow OPTIONS, GET, and POST
     allow_headers=["*"],  # Allow all headers
 )
 
@@ -71,12 +75,22 @@ KNOWLEDGE_BASE = [
         "content": "Union types allow you to specify that a value can be one of several types. They are written using the pipe symbol (|) between types, for example: string | number.",
         "source": "TypeScript Book - Union Types",
         "topic": "union types"
+    },
+    {
+        "content": "Question: What filename do you use to declare globals available across your entire TS project? Answer: You use the filename 'globals.d.ts' to declare globals available across your entire TypeScript project. For project global declarations, you can use globals.d.ts which is a special declaration file that TypeScript automatically includes in your project compilation context. Any declarations in globals.d.ts are automatically available throughout your entire project without needing explicit imports.",
+        "source": "TypeScript Book - Project Structure",
+        "topic": "global declarations"
+    },
+    {
+        "content": "Declaration files with the .d.ts extension are used in TypeScript to provide type information about code that exists elsewhere. The globals.d.ts file is a special convention for declaring global types and variables that should be available throughout your entire project.",
+        "source": "TypeScript Book - Declaration Files",
+        "topic": "declaration files"
     }
 ]
 
 # Cache for knowledge base embeddings to avoid recomputing
 _knowledge_base_embeddings = None
-_knowledge_base_version = 2  # Increment this when KNOWLEDGE_BASE changes
+_knowledge_base_version = 3  # Increment this when KNOWLEDGE_BASE changes
 _cached_version = None
 
 def get_knowledge_base_embeddings():
@@ -171,9 +185,21 @@ async def search_documentation(q: str = Query(..., description="Search query")):
         # Sort by similarity score in descending order
         similarities.sort(key=lambda x: x[1], reverse=True)
         
+        # Debug logging
+        print(f"\n=== Query: {q} ===")
+        print("Top 3 matches:")
+        for i in range(min(3, len(similarities))):
+            idx, score = similarities[i]
+            print(f"  {i+1}. [{score:.4f}] {KNOWLEDGE_BASE[idx]['topic']}: {KNOWLEDGE_BASE[idx]['content'][:100]}...")
+        print()
+        
         # Get the best match
         best_match_idx, confidence = similarities[0]
         best_match = KNOWLEDGE_BASE[best_match_idx]
+        
+        # If confidence is too low, we might not have relevant content
+        if confidence < 0.5:
+            print(f"WARNING: Low confidence ({confidence:.4f}) - knowledge base may not contain relevant information")
         
         return SearchResponse(
             answer=best_match["content"],
