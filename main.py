@@ -120,6 +120,7 @@ class SimilarityResponse(BaseModel):
     matches: List[str] = Field(..., description="Top 3 most similar documents")
 
 class SearchResponse(BaseModel):
+    question: str = Field(..., description="The original search question")
     answer: str = Field(..., description="The relevant documentation excerpt")
     sources: Optional[str] = Field(None, description="Reference to source document")
     confidence: Optional[float] = Field(None, description="Confidence score of the match")
@@ -237,6 +238,7 @@ async def search_documentation(q: str = Query(..., description="Search query")):
             answer = content
         
         return SearchResponse(
+            question=q,
             answer=answer,
             sources=best_match["source"],
             confidence=float(confidence)
