@@ -1,7 +1,7 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 import numpy as np
 from openai import OpenAI
 import os
@@ -34,12 +34,70 @@ def get_openai_client():
         _client = OpenAI(api_key=api_key)
     return _client
 
+# Knowledge base for TypeScript documentation
+# This would typically be loaded from a database or vector store in production
+KNOWLEDGE_BASE = [
+    {
+        "content": "The arrow function syntax in TypeScript uses the => symbol, which is affectionately called the 'fat arrow'. This syntax provides a shorter way to write function expressions and also lexically binds the 'this' value.",
+        "source": "TypeScript Book - Arrow Functions",
+        "topic": "arrow functions"
+    },
+    {
+        "content": "The double exclamation operator (!!) is used to convert any value into an explicit boolean. The first ! converts the value to a boolean and inverts it, the second ! inverts it back, resulting in the boolean representation of the original value.",
+        "source": "TypeScript Book - Type Assertions",
+        "topic": "type conversion"
+    },
+    {
+        "content": "TypeScript is a typed superset of JavaScript that compiles to plain JavaScript. It adds optional static typing, classes, and interfaces to JavaScript.",
+        "source": "TypeScript Book - Introduction",
+        "topic": "typescript basics"
+    },
+    {
+        "content": "Interfaces in TypeScript are used to define the structure of an object. They are a powerful way to define contracts within your code and contracts with code outside of your project.",
+        "source": "TypeScript Book - Interfaces",
+        "topic": "interfaces"
+    },
+    {
+        "content": "Generics provide a way to make components work with any data type and not restrict to one data type. They provide type safety without compromising the reusability of code.",
+        "source": "TypeScript Book - Generics",
+        "topic": "generics"
+    },
+    {
+        "content": "The 'as' keyword is used for type assertions in TypeScript. Type assertions tell the compiler to treat a value as a specific type, essentially overriding the TypeScript type inference system.",
+        "source": "TypeScript Book - Type Assertions",
+        "topic": "type assertions"
+    },
+    {
+        "content": "Union types allow you to specify that a value can be one of several types. They are written using the pipe symbol (|) between types, for example: string | number.",
+        "source": "TypeScript Book - Union Types",
+        "topic": "union types"
+    }
+]
+
+# Cache for knowledge base embeddings to avoid recomputing
+_knowledge_base_embeddings = None
+
+def get_knowledge_base_embeddings():
+    """Get or compute embeddings for the knowledge base."""
+    global _knowledge_base_embeddings
+    if _knowledge_base_embeddings is None:
+        _knowledge_base_embeddings = []
+        for item in KNOWLEDGE_BASE:
+            embedding = get_embedding(item["content"])
+            _knowledge_base_embeddings.append(np.array(embedding))
+    return _knowledge_base_embeddings
+
 class SimilarityRequest(BaseModel):
     docs: List[str] = Field(..., description="Array of document texts")
     query: str = Field(..., description="Search query string")
 
 class SimilarityResponse(BaseModel):
     matches: List[str] = Field(..., description="Top 3 most similar documents")
+
+class SearchResponse(BaseModel):
+    answer: str = Field(..., description="The relevant documentation excerpt")
+    sources: Optional[str] = Field(None, description="Reference to source document")
+    confidence: Optional[float] = Field(None, description="Confidence score of the match")
 
 def get_embedding(text: str) -> List[float]:
     """
@@ -73,9 +131,50 @@ async def root():
         "message": "InfoCore Semantic Search API is running",
         "status": "healthy",
         "endpoints": {
-            "similarity": "/similarity (POST)"
+            "similarity": "/similarity (POST)",
+            "search": "/search?q=query (GET)"
         }
     }
+
+@app.get("/search", response_model=SearchResponse)
+async def search_documentation(q: str = Query(..., description="Search query")):
+    """
+    Search the TypeScript documentation using semantic similarity.
+    Returns the most relevant documentation excerpt that answers the query.
+    """
+    if not q or not q.strip():
+        raise HTTPException(status_code=400, detail="Query parameter 'q' cannot be empty")
+    
+    try:
+        # Generate embedding for the query
+        query_embedding = np.array(get_embedding(q))
+        
+        # Get pre-computed knowledge base embeddings
+        kb_embeddings = get_knowledge_base_embeddings()
+        
+        # Calculate cosine similarity with each document in knowledge base
+        similarities = []
+        for idx, doc_embedding in enumerate(kb_embeddings):
+            similarity = cosine_similarity(query_embedding, doc_embedding)
+            similarities.append((idx, similarity))
+        
+        # Sort by similarity score in descending order
+        similarities.sort(key=lambda x: x[1], reverse=True)
+        
+        # Get the best match
+        best_match_idx, confidence = similarities[0]
+        best_match = KNOWLEDGE_BASE[best_match_idx]
+        
+        return SearchResponse(
+            answer=best_match["content"],
+            sources=best_match["source"],
+            confidence=float(confidence)
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.post("/similarity", response_model=SimilarityResponse)
 async def calculate_similarity(request: SimilarityRequest):
