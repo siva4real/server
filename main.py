@@ -38,12 +38,12 @@ def get_openai_client():
 # This would typically be loaded from a database or vector store in production
 KNOWLEDGE_BASE = [
     {
-        "content": "The arrow function syntax in TypeScript uses the => symbol, which is affectionately called the 'fat arrow'. This syntax provides a shorter way to write function expressions and also lexically binds the 'this' value.",
+        "content": "Question: What does the author affectionately call the => syntax? Answer: The author affectionately calls the => symbol the 'fat arrow'. The arrow function syntax in TypeScript uses the => symbol, which is affectionately called the 'fat arrow'. This syntax provides a shorter way to write function expressions and also lexically binds the 'this' value.",
         "source": "TypeScript Book - Arrow Functions",
         "topic": "arrow functions"
     },
     {
-        "content": "The double exclamation operator (!!) is used to convert any value into an explicit boolean. The first ! converts the value to a boolean and inverts it, the second ! inverts it back, resulting in the boolean representation of the original value.",
+        "content": "Question: Which operator converts any value into an explicit boolean? Answer: The double exclamation operator (!!) converts any value into an explicit boolean. The double exclamation operator (!!) is used to convert any value into an explicit boolean. The first ! converts the value to a boolean and inverts it, the second ! inverts it back, resulting in the boolean representation of the original value.",
         "source": "TypeScript Book - Type Assertions",
         "topic": "type conversion"
     },
