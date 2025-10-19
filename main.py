@@ -92,12 +92,17 @@ KNOWLEDGE_BASE = [
         "content": "Question: Which keyword pauses and resumes execution in generator functions? Answer: The 'yield' keyword pauses and resumes execution in generator functions. Generator functions use the yield keyword to pause their execution and return a value to the caller. When the generator's next() method is called, execution resumes from where it was paused. This allows generators to produce a sequence of values over time rather than computing them all at once.",
         "source": "TypeScript Book - Generators",
         "topic": "generators"
+    },
+    {
+        "content": "Question: What property name do discriminated unions use to narrow types? Answer: Discriminated unions use the 'kind' property name to narrow types. The kind property (also called a discriminant or tag) is a common literal property that exists in all members of the union, allowing TypeScript to narrow the union type based on the value of this property. Other common discriminant property names include 'type' and 'tag'.",
+        "source": "TypeScript Book - Discriminated Unions",
+        "topic": "discriminated unions"
     }
 ]
 
 # Cache for knowledge base embeddings to avoid recomputing
 _knowledge_base_embeddings = None
-_knowledge_base_version = 5  # Increment this when KNOWLEDGE_BASE changes
+_knowledge_base_version = 6  # Increment this when KNOWLEDGE_BASE changes
 _cached_version = None
 
 def get_knowledge_base_embeddings():
@@ -240,7 +245,7 @@ def parse_employee_query(query: str) -> Dict[str, Any]:
         ticket_id = int(match.group(1))
         return {
             "name": "get_ticket_status",
-            "arguments": json.dumps({"ticket_id": ticket_id}, separators=(',', ':'))
+            "arguments": json.dumps({"ticket_id": ticket_id})
         }
     
     # Pattern 2: Meeting Scheduling
@@ -259,7 +264,7 @@ def parse_employee_query(query: str) -> Dict[str, Any]:
                 "date": date,
                 "time": time,
                 "meeting_room": meeting_room
-            }, separators=(',', ':'))
+            })
         }
     
     # Pattern 3: Expense Balance
@@ -270,7 +275,7 @@ def parse_employee_query(query: str) -> Dict[str, Any]:
         employee_id = int(match.group(1))
         return {
             "name": "get_expense_balance",
-            "arguments": json.dumps({"employee_id": employee_id}, separators=(',', ':'))
+            "arguments": json.dumps({"employee_id": employee_id})
         }
     
     # Pattern 4: Performance Bonus
@@ -285,7 +290,7 @@ def parse_employee_query(query: str) -> Dict[str, Any]:
             "arguments": json.dumps({
                 "employee_id": employee_id,
                 "current_year": current_year
-            }, separators=(',', ':'))
+            })
         }
     
     # Pattern 5: Office Issue Reporting
@@ -302,7 +307,7 @@ def parse_employee_query(query: str) -> Dict[str, Any]:
             "arguments": json.dumps({
                 "issue_code": issue_code,
                 "department": department
-            }, separators=(',', ':'))
+            })
         }
     
     # If no pattern matches, raise an error
