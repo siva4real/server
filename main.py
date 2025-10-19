@@ -76,15 +76,25 @@ KNOWLEDGE_BASE = [
 
 # Cache for knowledge base embeddings to avoid recomputing
 _knowledge_base_embeddings = None
+_knowledge_base_version = 2  # Increment this when KNOWLEDGE_BASE changes
+_cached_version = None
 
 def get_knowledge_base_embeddings():
     """Get or compute embeddings for the knowledge base."""
-    global _knowledge_base_embeddings
+    global _knowledge_base_embeddings, _cached_version
+    
+    # Invalidate cache if knowledge base version changed
+    if _cached_version != _knowledge_base_version:
+        _knowledge_base_embeddings = None
+        _cached_version = _knowledge_base_version
+    
     if _knowledge_base_embeddings is None:
+        print(f"Computing embeddings for {len(KNOWLEDGE_BASE)} documents...")
         _knowledge_base_embeddings = []
         for item in KNOWLEDGE_BASE:
             embedding = get_embedding(item["content"])
             _knowledge_base_embeddings.append(np.array(embedding))
+        print("Embeddings computed successfully!")
     return _knowledge_base_embeddings
 
 class SimilarityRequest(BaseModel):
