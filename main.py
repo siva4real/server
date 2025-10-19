@@ -78,7 +78,7 @@ KNOWLEDGE_BASE = [
         "topic": "union types"
     },
     {
-        "content": "Question: What filename do you use to declare globals available across your entire TS project? Answer: You use the filename 'globals.d.ts' to declare globals available across your entire TypeScript project. For project global declarations, you can use globals.d.ts which is a special declaration file that TypeScript automatically includes in your project compilation context. Any declarations in globals.d.ts are automatically available throughout your entire project without needing explicit imports.",
+        "content": "Question: What filename do you use to declare globals available across your entire TS project? Answer: You use the filename 'global.d.ts' to declare globals available across your entire TypeScript project. For project global declarations, you can use global.d.ts which is a special declaration file that TypeScript automatically includes in your project compilation context. Any declarations in global.d.ts are automatically available throughout your entire project without needing explicit imports.",
         "source": "TypeScript Book - Project Structure",
         "topic": "global declarations"
     },
@@ -91,7 +91,7 @@ KNOWLEDGE_BASE = [
 
 # Cache for knowledge base embeddings to avoid recomputing
 _knowledge_base_embeddings = None
-_knowledge_base_version = 3  # Increment this when KNOWLEDGE_BASE changes
+_knowledge_base_version = 4  # Increment this when KNOWLEDGE_BASE changes
 _cached_version = None
 
 def get_knowledge_base_embeddings():

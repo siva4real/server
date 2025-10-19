@@ -23,24 +23,25 @@ def test_search(query):
         response.raise_for_status()
         
         result = response.json()
-        print(f"\n✅ Status: {response.status_code}")
+        print(f"\nStatus: {response.status_code}")
+        print(f"Question: {result.get('question', 'N/A')}")
         print(f"Confidence: {result.get('confidence', 'N/A'):.4f}")
         print(f"Sources: {result.get('sources', 'N/A')}")
-        print(f"\nAnswer:\n{result.get('answer', 'N/A')[:300]}...")
+        print(f"\nAnswer: {result.get('answer', 'N/A')}")
         
     except requests.exceptions.RequestException as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\nError: {e}")
 
 def main():
-    print("\n🔍 Testing Search Endpoint")
+    print("\nTesting Search Endpoint")
     print(f"Target: {BASE_URL}")
     
     # Test health check first
     try:
         response = requests.get(BASE_URL)
-        print(f"\n✅ Server is running: {response.json()}")
+        print(f"\nServer is running: {response.json()}")
     except:
-        print(f"\n❌ Server is not running at {BASE_URL}")
+        print(f"\nServer is not running at {BASE_URL}")
         print("Start the server with: python main.py")
         return
     
