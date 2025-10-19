@@ -154,6 +154,62 @@ def cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
     norm2 = np.linalg.norm(vec2)
     return dot_product / (norm1 * norm2)
 
+def keyword_score(query: str, document: str) -> float:
+    """
+    Calculate keyword overlap score between query and document.
+    This helps boost exact keyword matches.
+    """
+    # Normalize and tokenize
+    query_words = set(re.findall(r'\b\w+\b', query.lower()))
+    doc_words = set(re.findall(r'\b\w+\b', document.lower()))
+    
+    # Remove common stop words
+    stop_words = {'a', 'an', 'the', 'is', 'are', 'was', 'were', 'in', 'on', 'at', 'to', 'for', 'of', 'and', 'or'}
+    query_words = query_words - stop_words
+    doc_words = doc_words - stop_words
+    
+    if not query_words:
+        return 0.0
+    
+    # Calculate overlap score
+    overlap = query_words.intersection(doc_words)
+    return len(overlap) / len(query_words)
+
+def hybrid_score(semantic_sim: float, keyword_sim: float, alpha: float = 0.7) -> float:
+    """
+    Combine semantic similarity and keyword matching scores.
+    alpha: weight for semantic similarity (1-alpha for keyword matching)
+    """
+    return alpha * semantic_sim + (1 - alpha) * keyword_sim
+
+def preprocess_query(query: str) -> str:
+    """
+    Preprocess and normalize the query for better matching.
+    """
+    # Strip whitespace
+    query = query.strip()
+    
+    # Expand common abbreviations
+    abbreviations = {
+        'ts': 'typescript',
+        'js': 'javascript',
+        'fn': 'function',
+        'func': 'function',
+        'var': 'variable',
+        'arg': 'argument',
+        'param': 'parameter',
+        'obj': 'object',
+        'arr': 'array',
+    }
+    
+    words = query.split()
+    for i, word in enumerate(words):
+        word_lower = word.lower()
+        if word_lower in abbreviations:
+            words[i] = abbreviations[word_lower]
+    
+    return ' '.join(words)
+
 @app.get("/")
 async def root():
     """
@@ -294,32 +350,49 @@ async def search_documentation(q: str = Query(..., description="Search query")):
         raise HTTPException(status_code=400, detail="Query parameter 'q' cannot be empty")
     
     try:
-        # Generate embedding for the query
-        query_embedding = np.array(get_embedding(q))
+        # Preprocess the query
+        original_query = q
+        processed_query = preprocess_query(q)
+        
+        # Generate embedding for the processed query
+        query_embedding = np.array(get_embedding(processed_query))
         
         # Get pre-computed knowledge base embeddings
         kb_embeddings = get_knowledge_base_embeddings()
         
-        # Calculate cosine similarity with each document in knowledge base
+        # Calculate hybrid score (semantic + keyword) with each document in knowledge base
         similarities = []
         for idx, doc_embedding in enumerate(kb_embeddings):
-            similarity = cosine_similarity(query_embedding, doc_embedding)
-            similarities.append((idx, similarity))
+            # Semantic similarity
+            semantic_sim = cosine_similarity(query_embedding, doc_embedding)
+            
+            # Keyword matching score
+            doc_content = KNOWLEDGE_BASE[idx]["content"]
+            keyword_sim = keyword_score(processed_query, doc_content)
+            
+            # Combine scores
+            combined_score = hybrid_score(semantic_sim, keyword_sim, alpha=0.75)
+            
+            similarities.append((idx, combined_score, semantic_sim, keyword_sim))
         
-        # Sort by similarity score in descending order
+        # Sort by combined score in descending order
         similarities.sort(key=lambda x: x[1], reverse=True)
         
         # Debug logging
-        print(f"\n=== Query: {q} ===")
-        print("Top 3 matches:")
+        print(f"\n=== Query: {original_query} ===")
+        if processed_query != original_query:
+            print(f"Processed: {processed_query}")
+        print("Top 3 matches (hybrid score [semantic | keyword]):")
         for i in range(min(3, len(similarities))):
-            idx, score = similarities[i]
-            print(f"  {i+1}. [{score:.4f}] {KNOWLEDGE_BASE[idx]['topic']}: {KNOWLEDGE_BASE[idx]['content'][:100]}...")
+            idx, combined, semantic, keyword = similarities[i]
+            print(f"  {i+1}. [{combined:.4f}] [sem:{semantic:.4f} | key:{keyword:.4f}] {KNOWLEDGE_BASE[idx]['topic']}: {KNOWLEDGE_BASE[idx]['content'][:80]}...")
         print()
         
         # Get the best match
-        best_match_idx, confidence = similarities[0]
+        best_match_idx, confidence, semantic_conf, keyword_conf = similarities[0]
         best_match = KNOWLEDGE_BASE[best_match_idx]
+        
+        print(f"Selected: {best_match['topic']} (combined: {confidence:.4f}, semantic: {semantic_conf:.4f}, keyword: {keyword_conf:.4f})")
         
         # If confidence is too low, we might not have relevant content
         if confidence < 0.5:
@@ -332,7 +405,7 @@ async def search_documentation(q: str = Query(..., description="Search query")):
             full_answer = content.split("Answer:", 1)[1].strip()
             
             # For specific "what/which" questions, extract the key information in quotes or parentheses
-            if any(word in q.lower() for word in ['what', 'which', 'who', 'where', 'when']):
+            if any(word in original_query.lower() for word in ['what', 'which', 'who', 'where', 'when']):
                 # Look for content in single quotes (e.g., 'fat arrow', 'globals.d.ts')
                 quoted_match = re.search(r"'([^']+)'", full_answer)
                 # Look for content in parentheses (e.g., (!!), (=>))
@@ -360,7 +433,7 @@ async def search_documentation(q: str = Query(..., description="Search query")):
             answer = content
         
         return SearchResponse(
-            question=q,
+            question=original_query,
             answer=answer,
             sources=best_match["source"],
             confidence=float(confidence)
