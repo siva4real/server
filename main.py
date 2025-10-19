@@ -279,12 +279,13 @@ def parse_employee_query(query: str) -> Dict[str, Any]:
         }
     
     # Pattern 4: Performance Bonus
-    # Examples: "Calculate performance bonus for employee 10056 for 2025."
-    bonus_pattern = r'(?:calculate|compute).*?(?:performance\s+)?bonus.*?(?:employee|emp)\s+(\d+).*?(?:for\s+)?(\d{4})'
+    # Examples: "Calculate performance bonus for employee 10056 for 2025.", "Emp 90378 bonus 2025"
+    bonus_pattern = r'(?:(?:employee|emp)\s+(\d+).*?bonus.*?(\d{4})|(?:calculate|compute).*?bonus.*?(?:employee|emp)\s+(\d+).*?(\d{4}))'
     match = re.search(bonus_pattern, query_lower)
     if match:
-        employee_id = int(match.group(1))
-        current_year = int(match.group(2))
+        # Try first pattern (short form: "Emp 90378 bonus 2025")
+        employee_id = int(match.group(1) or match.group(3))
+        current_year = int(match.group(2) or match.group(4))
         return {
             "name": "calculate_performance_bonus",
             "arguments": json.dumps({
