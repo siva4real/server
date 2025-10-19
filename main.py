@@ -1,11 +1,12 @@
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import numpy as np
 from openai import OpenAI
 import os
 import re
+import json
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -158,9 +159,125 @@ async def root():
         "status": "healthy",
         "endpoints": {
             "similarity": "/similarity (POST)",
-            "search": "/search?q=query (GET)"
+            "search": "/search?q=query (GET)",
+            "execute": "/execute?q=query (GET)"
         }
     }
+
+def parse_employee_query(query: str) -> Dict[str, Any]:
+    """
+    Parse employee queries and map them to appropriate function calls.
+    Returns a dictionary with 'name' and 'arguments' keys.
+    """
+    query_lower = query.lower().strip()
+    
+    # Pattern 1: Ticket Status
+    # Examples: "What is the status of ticket 83742?"
+    ticket_pattern = r'(?:status|check).*?ticket\s+(\d+)'
+    match = re.search(ticket_pattern, query_lower)
+    if match:
+        ticket_id = int(match.group(1))
+        return {
+            "name": "get_ticket_status",
+            "arguments": json.dumps({"ticket_id": ticket_id})
+        }
+    
+    # Pattern 2: Meeting Scheduling
+    # Examples: "Schedule a meeting on 2025-02-15 at 14:00 in Room A."
+    meeting_pattern = r'schedule.*?meeting.*?(?:on\s+)?(\d{4}-\d{2}-\d{2}).*?(?:at\s+)?(\d{2}:\d{2}).*?(?:in\s+|room\s+)([A-Za-z0-9\s]+?)(?:\.|$)'
+    match = re.search(meeting_pattern, query_lower, re.IGNORECASE)
+    if match:
+        date = match.group(1)
+        time = match.group(2)
+        meeting_room = match.group(3).strip()
+        # Capitalize room name properly
+        meeting_room = query[match.start(3):match.end(3)].strip()
+        return {
+            "name": "schedule_meeting",
+            "arguments": json.dumps({
+                "date": date,
+                "time": time,
+                "meeting_room": meeting_room
+            })
+        }
+    
+    # Pattern 3: Expense Balance
+    # Examples: "Show my expense balance for employee 10056."
+    expense_pattern = r'expense.*?balance.*?(?:employee\s+)?(\d+)'
+    match = re.search(expense_pattern, query_lower)
+    if match:
+        employee_id = int(match.group(1))
+        return {
+            "name": "get_expense_balance",
+            "arguments": json.dumps({"employee_id": employee_id})
+        }
+    
+    # Pattern 4: Performance Bonus
+    # Examples: "Calculate performance bonus for employee 10056 for 2025."
+    bonus_pattern = r'(?:calculate|compute).*?(?:performance\s+)?bonus.*?employee\s+(\d+).*?(?:for\s+)?(\d{4})'
+    match = re.search(bonus_pattern, query_lower)
+    if match:
+        employee_id = int(match.group(1))
+        current_year = int(match.group(2))
+        return {
+            "name": "calculate_performance_bonus",
+            "arguments": json.dumps({
+                "employee_id": employee_id,
+                "current_year": current_year
+            })
+        }
+    
+    # Pattern 5: Office Issue Reporting
+    # Examples: "Report office issue 45321 for the Facilities department."
+    issue_pattern = r'report.*?(?:office\s+)?issue\s+(\d+).*?(?:for\s+)?(?:the\s+)?([A-Za-z]+)(?:\s+department)?'
+    match = re.search(issue_pattern, query_lower, re.IGNORECASE)
+    if match:
+        issue_code = int(match.group(1))
+        department = match.group(2).strip()
+        # Capitalize department name properly from original query
+        department = query[match.start(2):match.end(2)].strip()
+        return {
+            "name": "report_office_issue",
+            "arguments": json.dumps({
+                "issue_code": issue_code,
+                "department": department
+            })
+        }
+    
+    # If no pattern matches, raise an error
+    raise HTTPException(
+        status_code=400,
+        detail=f"Unable to parse query: '{query}'. Please ensure your query matches one of the supported formats."
+    )
+
+@app.get("/execute")
+async def execute_query(q: str = Query(..., description="Employee query to execute")):
+    """
+    Execute employee queries by mapping them to appropriate function calls.
+    
+    Supported queries:
+    - Ticket Status: "What is the status of ticket [ID]?"
+    - Meeting Scheduling: "Schedule a meeting on [DATE] at [TIME] in [ROOM]."
+    - Expense Balance: "Show my expense balance for employee [ID]."
+    - Performance Bonus: "Calculate performance bonus for employee [ID] for [YEAR]."
+    - Office Issue: "Report office issue [CODE] for the [DEPARTMENT] department."
+    
+    Returns:
+        JSON with 'name' (function name) and 'arguments' (JSON string of parameters)
+    """
+    if not q or not q.strip():
+        raise HTTPException(status_code=400, detail="Query parameter 'q' cannot be empty")
+    
+    try:
+        result = parse_employee_query(q)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing query: {str(e)}"
+        )
 
 @app.get("/search", response_model=SearchResponse)
 async def search_documentation(q: str = Query(..., description="Search query")):
