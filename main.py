@@ -205,7 +205,14 @@ async def search_documentation(q: str = Query(..., description="Search query")):
         content = best_match["content"]
         if "Answer:" in content:
             # Extract just the answer part after "Answer:"
-            answer = content.split("Answer:", 1)[1].strip()
+            full_answer = content.split("Answer:", 1)[1].strip()
+            # Get just the first sentence to avoid redundancy
+            # Look for the first sentence ending with a period
+            first_period = full_answer.find('. ')
+            if first_period != -1:
+                answer = full_answer[:first_period + 1].strip()
+            else:
+                answer = full_answer
         else:
             answer = content
         
