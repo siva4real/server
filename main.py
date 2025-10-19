@@ -240,7 +240,7 @@ def parse_employee_query(query: str) -> Dict[str, Any]:
         ticket_id = int(match.group(1))
         return {
             "name": "get_ticket_status",
-            "arguments": json.dumps({"ticket_id": ticket_id})
+            "arguments": json.dumps({"ticket_id": ticket_id}, separators=(',', ':'))
         }
     
     # Pattern 2: Meeting Scheduling
@@ -259,7 +259,7 @@ def parse_employee_query(query: str) -> Dict[str, Any]:
                 "date": date,
                 "time": time,
                 "meeting_room": meeting_room
-            })
+            }, separators=(',', ':'))
         }
     
     # Pattern 3: Expense Balance
@@ -270,7 +270,7 @@ def parse_employee_query(query: str) -> Dict[str, Any]:
         employee_id = int(match.group(1))
         return {
             "name": "get_expense_balance",
-            "arguments": json.dumps({"employee_id": employee_id})
+            "arguments": json.dumps({"employee_id": employee_id}, separators=(',', ':'))
         }
     
     # Pattern 4: Performance Bonus
@@ -285,7 +285,7 @@ def parse_employee_query(query: str) -> Dict[str, Any]:
             "arguments": json.dumps({
                 "employee_id": employee_id,
                 "current_year": current_year
-            })
+            }, separators=(',', ':'))
         }
     
     # Pattern 5: Office Issue Reporting
@@ -302,7 +302,7 @@ def parse_employee_query(query: str) -> Dict[str, Any]:
             "arguments": json.dumps({
                 "issue_code": issue_code,
                 "department": department
-            })
+            }, separators=(',', ':'))
         }
     
     # If no pattern matches, raise an error
@@ -324,7 +324,7 @@ async def execute_query(q: str = Query(..., description="Employee query to execu
     - Office Issue: "Report office issue [CODE] for the [DEPARTMENT] department."
     
     Returns:
-        JSON with 'name' (function name) and 'arguments' (JSON string of parameters)
+        JSON with 'name' (function name) and 'arguments' (compact JSON string of parameters)
     """
     if not q or not q.strip():
         raise HTTPException(status_code=400, detail="Query parameter 'q' cannot be empty")

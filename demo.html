@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechNova Corp Digital Assistant - Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .input-section {
+            margin-bottom: 30px;
+        }
+        
+        label {
+            display: block;
+            color: #555;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .examples {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .examples h3 {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .example-btn {
+            display: inline-block;
+            margin: 5px;
+            padding: 8px 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+        
+        .example-btn:hover {
+            background: #5568d3;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+        
+        .result-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .result-section.show {
+            display: block;
+        }
+        
+        .result-section h2 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        
+        .result-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .result-label {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .result-value {
+            color: #333;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        
+        .error {
+            background: #fee;
+            border-left-color: #e53e3e;
+            color: #c53030;
+        }
+        
+        .success {
+            border-left-color: #48bb78;
+        }
+        
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+        
+        .loader.show {
+            display: block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏢 TechNova Corp Digital Assistant</h1>
+        <p class="subtitle">Test the /execute endpoint with employee queries</p>
+        
+        <div class="input-section">
+            <label for="queryInput">Enter your query:</label>
+            <input type="text" id="queryInput" placeholder="e.g., What is the status of ticket 83742?">
+            
+            <div class="examples">
+                <h3>Quick Examples (click to use):</h3>
+                <button class="example-btn" onclick="setQuery('What is the status of ticket 83742?')">Ticket Status</button>
+                <button class="example-btn" onclick="setQuery('Schedule a meeting on 2025-02-15 at 14:00 in Room A.')">Schedule Meeting</button>
+                <button class="example-btn" onclick="setQuery('Show my expense balance for employee 10056.')">Expense Balance</button>
+                <button class="example-btn" onclick="setQuery('Calculate performance bonus for employee 10056 for 2025.')">Performance Bonus</button>
+                <button class="example-btn" onclick="setQuery('Report office issue 45321 for the Facilities department.')">Report Issue</button>
+            </div>
+            
+            <button class="submit-btn" onclick="executeQuery()">Execute Query</button>
+        </div>
+        
+        <div class="loader" id="loader"></div>
+        
+        <div class="result-section" id="resultSection">
+            <h2>Response:</h2>
+            <div id="resultContent"></div>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = 'http://localhost:8000/execute';
+        
+        function setQuery(query) {
+            document.getElementById('queryInput').value = query;
+        }
+        
+        async function executeQuery() {
+            const query = document.getElementById('queryInput').value.trim();
+            const loader = document.getElementById('loader');
+            const resultSection = document.getElementById('resultSection');
+            const resultContent = document.getElementById('resultContent');
+            
+            if (!query) {
+                showError('Please enter a query');
+                return;
+            }
+            
+            // Show loader
+            loader.classList.add('show');
+            resultSection.classList.remove('show');
+            
+            try {
+                const url = `${API_URL}?q=${encodeURIComponent(query)}`;
+                const response = await fetch(url);
+                
+                loader.classList.remove('show');
+                resultSection.classList.add('show');
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    showError(error.detail || 'Request failed');
+                    return;
+                }
+                
+                const data = await response.json();
+                showSuccess(data);
+                
+            } catch (error) {
+                loader.classList.remove('show');
+                resultSection.classList.add('show');
+                showError(`Failed to fetch: ${error.message}`);
+            }
+        }
+        
+        function showSuccess(data) {
+            const args = JSON.parse(data.arguments);
+            let argsHtml = '';
+            for (const [key, value] of Object.entries(args)) {
+                argsHtml += `<div class="result-box">
+                    <div class="result-label">${key}</div>
+                    <div class="result-value">${value} (${typeof value})</div>
+                </div>`;
+            }
+            
+            document.getElementById('resultContent').innerHTML = `
+                <div class="result-box success">
+                    <div class="result-label">Function Name</div>
+                    <div class="result-value">${data.name}</div>
+                </div>
+                <div class="result-box">
+                    <div class="result-label">Raw Arguments (JSON)</div>
+                    <div class="result-value">${data.arguments}</div>
+                </div>
+                <h3 style="margin: 15px 0 10px 0; color: #333; font-size: 14px;">Parsed Arguments:</h3>
+                ${argsHtml}
+            `;
+        }
+        
+        function showError(message) {
+            document.getElementById('resultContent').innerHTML = `
+                <div class="result-box error">
+                    <div class="result-label">Error</div>
+                    <div class="result-value">${message}</div>
+                </div>
+            `;
+        }
+        
+        // Allow Enter key to submit
+        document.getElementById('queryInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                executeQuery();
+            }
+        });
+    </script>
+</body>
+</html>
+
